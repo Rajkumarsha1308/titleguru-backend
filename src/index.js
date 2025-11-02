@@ -24,7 +24,8 @@ app.post('/api/generate/title', async (req, res) => {
   if (!keyword) return res.status(400).json({ error: 'Keyword required' });
 
   try {
-    const prompt = "Give ${count_titles} SEO-optimized YouTube titles in Tamil for the keyword "${keyword}". Tone: ${tone}. Include tags and hashtags.";
+    const prompt = `Give ${count_titles} SEO-optimized YouTube titles in Tamil for the keyword "${keyword}". Tone: ${tone}. Include tags and hashtags.`;
+
 
 
     const response = await openai.createChatCompletion({
