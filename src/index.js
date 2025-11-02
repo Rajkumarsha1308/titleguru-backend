@@ -2,16 +2,16 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
+
 
 dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 const prisma = new PrismaClient();
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 const openai = new OpenAIApi(configuration);
 
 app.use(cors());
