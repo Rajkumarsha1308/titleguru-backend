@@ -48,5 +48,5 @@ app.post('/api/generate/title', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`✅ TitleGuru backend is running!`);
-
+  console.log(`TitleGuru backend running on http://localhost:${port}`);
+});
