@@ -42,10 +42,10 @@ app.post('/api/generate/title', async (req, res) => {
 
     res.json({ output: text });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'AI generation failed' });
-  }
-});
+  console.error('OpenAI Error:', err.response?.data || err.message || err);
+  res.status(500).json({ error: 'AI generation failed' });
+}
+
 
 app.listen(port, () => {
   console.log(`TitleGuru backend running on http://localhost:${port}`);
