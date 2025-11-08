@@ -13,22 +13,30 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
-app.post('/api/generate', async (req, res) => {
-  try {
-    const { messages, model = 'gpt-4.1-mini', temperature = 0.5 } = req.body || {};
-    if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'Missing OPENAI_API_KEY' });
-    if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages[] is required' });
+app.post('/api/generate/title', async (req, res) => {
+  const { keyword, count_titles = 5, tone = 'catchy' } = req.body;
+  if (!keyword) return res.status(400).json({ error: 'Keyword required' });
 
-    const resp = await openai.chat.completions.create({ model, messages, temperature });
-    const content = resp?.choices?.[0]?.message?.content ?? '';
-    res.json({ content, raw: resp });
+  try {
+    const prompt = `Give ${count_titles} SEO-optimized YouTube titles in Tamil for the keyword "${keyword}". Tone: ${tone}. Include tags and hashtags.`;
+
+    const response = await openai.createChatCompletion({
+      model: process.env.AI_MODEL || 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: 'You are a Tamil YouTube title generator.' },
+        { role: 'user', content: prompt },
+      ],
+    });
+
+    const text = response.data.choices[0].message.content;
+
+    await prisma.generation.create({
+      data: { keyword, response: text },
+    });
+
+    res.json({ output: text });
   } catch (err) {
-    console.error('AI generation failed:', err);
-    const status = err?.status || 500;
-    const details = err?.response?.data || err?.message || err;
-    res.status(status).json({ error: 'OpenAI error', details });
+    console.error('OpenAI Error:', err.response?.data || err.message || err);
+    res.status(500).json({ error: 'AI generation failed' });
   }
 });
-
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
