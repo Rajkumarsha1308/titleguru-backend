@@ -1,60 +1,34 @@
+// server.js
 import express from 'express';
-import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
+import dotenv from 'dotenv';
 import OpenAI from 'openai';
-
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
-const prisma = new PrismaClient();
+app.use(cors({ origin: ['http://localhost:3000', 'http://127.0.0.1:3000'] }));
+app.use(express.json({ limit: '1mb' }));
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-app.use(cors());
-app.use(express.json());
+app.get('/health', (req, res) => res.json({ ok: true }));
 
-app.get('/health', (req, res) => {
-  res.send('OK');
-});
-
-app.post('/api/generate/title', async (req, res) => {
-  const { keyword, count_titles = 5, tone = 'catchy' } = req.body;
-
-  if (!keyword) {
-    return res.status(400).json({ error: 'Keyword required' });
-  }
-
+app.post('/api/generate', async (req, res) => {
   try {
-    const prompt = `Give ${count_titles} SEO-optimized YouTube titles in Tamil for the keyword "${keyword}". Tone: ${tone}. Include tags and hashtags.`;
+    const { messages, model = 'gpt-4.1-mini', temperature = 0.5 } = req.body || {};
+    if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'Missing OPENAI_API_KEY' });
+    if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages[] is required' });
 
-    const response = await openai.chat.completions.create({
-      model: process.env.AI_MODEL || 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: 'You are a Tamil YouTube title generator.' },
-        { role: 'user', content: prompt },
-      ],
-    });
-
-    const text = response.choices[0].message.content;
-
-    await prisma.generation.create({
-      data: {
-        keyword,
-        response: text,
-      },
-    });
-
-    res.json({ output: text });
+    const resp = await openai.chat.completions.create({ model, messages, temperature });
+    const content = resp?.choices?.[0]?.message?.content ?? '';
+    res.json({ content, raw: resp });
   } catch (err) {
-    console.error('OpenAI Error:', err.response?.data || err.message || err);
-    res.status(500).json({ error: 'AI generation failed' });
+    console.error('AI generation failed:', err);
+    const status = err?.status || 500;
+    const details = err?.response?.data || err?.message || err;
+    res.status(status).json({ error: 'OpenAI error', details });
   }
 });
 
-app.listen(port, () => {
-  console.log(`✅ TitleGuru backend running on port ${port}`);
-});
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
